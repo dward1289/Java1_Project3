@@ -5,8 +5,7 @@ import android.content.Context;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.LinearLayout.LayoutParams;
-import android.widget.RadioButton;
-import android.widget.RadioGroup;
+
 
 public class theLayout {
 
@@ -26,18 +25,5 @@ public class theLayout {
 
 		return linearLayout;
 	}
-	
-	//Create radio buttons
-	public static RadioGroup getOpions(Context context, String[] options){
-		RadioGroup boxes = new RadioGroup(context);
-		
-		for(int i=1; i<options.length; i++){
-			RadioButton radioBtn = new RadioButton(context);
-			radioBtn.setText(options[i]);
-			radioBtn.setId(i+1);
-			boxes.addView(radioBtn);
-		}
-		
-		return boxes;
-	}
+
 }

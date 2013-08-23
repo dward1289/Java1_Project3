@@ -1,9 +1,15 @@
 package com.DevonaWard.project2;
 
+
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
 
-import com.DevonaWard.theInfo.theJSON;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+
 import com.DevonaWard.theInfo.webInfo;
 import com.DevonaWard.theLayout.theLayout;
 import com.DevonaWard.thelibrary.ConnectionError;
@@ -17,33 +23,41 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.View;
 import android.view.ViewGroup.LayoutParams;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.RadioButton;
-import android.widget.RadioGroup;
-
+import android.widget.Spinner;
+import android.widget.Toast;
 
 import android.widget.TextView;
-
-
-
 import android.widget.LinearLayout;
+import android.widget.AdapterView.OnItemSelectedListener;
+
 
 
 public class MainActivity extends Activity {
 	Context context;
 	String[] teamCity;
-	RadioGroup cityOptions;
 	TextView resultView;
-	TextView infoView;
 	Boolean _connected = false;
-
+	TextView jsonView;
+	TextView connectedView;
+	ArrayList<String> teamAbbrList = new ArrayList<String>();
+	ArrayList<String> teamConList = new ArrayList<String>();
+	ArrayList<String> teamDivList = new ArrayList<String>();
+	ArrayList<String> teamSiteList = new ArrayList<String>();
+	Spinner viewSpinner;
+	String teamAbbr;
+	String teamCon;
+	String teamDiv;
+	String teamSite;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		
 		//City_Array count
-		int teamNum = 4;
+		int teamNum = getResources().getStringArray(R.array.city_array).length;
 		context = this;
 		
 		//City Array
@@ -61,49 +75,72 @@ public class MainActivity extends Activity {
 			
 			@Override
 			public void onClick(View v) {
-				/*This will get the ID of the selected radio button,
-				 * and display the data from theJSON in the resultView.
-				 */
-				int id = cityOptions.getCheckedRadioButtonId();
-				RadioButton selectedRadio = (RadioButton)findViewById(id);
-				String selected = selectedRadio.getText().toString();
-				resultView.setText(theJSON.readJSON(selected));
+				/*Get selected team info.*/
+				int the = viewSpinner.getSelectedItemPosition();
+				String abbr = teamAbbrList.get(the).toString();
+				String con = teamConList.get(the).toString();  
+				String div = teamDivList.get(the).toString();
+				String site = teamSiteList.get(the).toString();
 				
-				getTeam(selected);
-				
+				jsonView.setText("Team Abbreviation: "+abbr+"\nTeam Conference: "+con+"\nTeam Division: "+div+"\nTeam Arena: "+site);
 			}
 			
 		});
 
+		//Make web request
+		getTeam();
+		
+		connectedView = new TextView(context);
+		
 		//Detecting network connection
 				_connected = TestConnection.getConnectionStatus(context);
 				if(_connected){
-					Log.i("Network Connection: ",TestConnection.getConnectionType(context));
+					connectedView.setText("Network Connection: " + TestConnection.getConnectionType(context)+"\n");
 				}
 				else{
-					Log.i("",ConnectionError.getConnectionType(context));
+					connectedView.setText(""+ConnectionError.getConnectionType(context)+"\n");
 				}
 
 
 		//TextView created
 		TextView txtView = new TextView(context);
-		txtView.setText("Select from the list of "+ teamNum +" cities.");
+		txtView.setText("Select from the list of "+ teamNum +" teams.");
 		
-		//Populates radio buttons using teamCity.	
-		cityOptions = theLayout.getOpions(this, teamCity);
-		
-		//Displays JSON results
-		resultView = new TextView(context);
-		
-		//Displays a cool from a condition
-		infoView = new TextView(context);
+		//Spinner adapter
+		ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<String>(context, android.R.layout.simple_spinner_item, teamCity);
+		spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 				
-		linearLayout.addView(txtView);
-		linearLayout.addView(cityOptions);
-		linearLayout.addView(mainLayout);
-		linearLayout.addView(resultView);
-		linearLayout.addView(infoView);
+				//Creating the spinner
+				viewSpinner = new Spinner(context);
+				viewSpinner.setAdapter(spinnerAdapter);
+				layoutParams = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
+				viewSpinner.setLayoutParams(layoutParams);
+				//Spinner onClick
+				viewSpinner.setOnItemSelectedListener(new OnItemSelectedListener(){
 
+					@Override
+					public void onItemSelected(AdapterView<?> parent, View view,
+							int position, long id) {
+						Toast.makeText(context, "You selected the " + teamCity[position], Toast.LENGTH_LONG).show();
+					}
+
+					@Override
+					public void onNothingSelected(AdapterView<?> arg0) {
+						// TODO Auto-generated method stub
+						
+					}
+					
+				});
+
+		//Displays JSON results		
+	    jsonView = new TextView(context);
+	        
+		linearLayout.addView(txtView);
+		linearLayout.addView(viewSpinner);
+		linearLayout.addView(mainLayout);
+		linearLayout.addView(connectedView);
+		linearLayout.addView(jsonView);
+		
 		
 		setContentView(linearLayout);
 	}
@@ -116,7 +153,7 @@ public class MainActivity extends Activity {
 	}
 	
 	//Get URL
-	private void getTeam(String team){
+	private void getTeam(){
 		String baseURL = "https://erikberg.com/nba/teams.json";
 		URL finalURL;
 		try{
@@ -139,11 +176,31 @@ public class MainActivity extends Activity {
 			}
 			return response;
 		}
-		//Show data in JSON format in Log
+		//Get data and add to arrays.
 		@Override
 		protected void onPostExecute(String result){
-			Log.i("URL RESPONSE", result);
-		}
+			try {
+				JSONArray jsonArray = new JSONArray(result);
+				
+				int n = jsonArray.length();
+				for(int i = 0;i<n; i++){
+					JSONObject jsonObject = jsonArray.getJSONObject(i);
+					
+					teamAbbr= jsonObject.getString("abbreviation");
+					teamCon = jsonObject.getString("conference");
+					teamDiv = jsonObject.getString("division");
+					teamSite= jsonObject.getString("site_name");
+					teamAbbrList.add(teamAbbr);
+					teamConList.add(teamCon);  
+					teamDivList.add(teamDiv);
+					teamSiteList.add(teamSite);
+				}
+				
+			} catch (JSONException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+		}	
 	}
 }
 
